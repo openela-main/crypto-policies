@@ -1,4 +1,4 @@
-%global git_commit 03b28b32c3dd992c251b9a05352f1234582c18e4
+%global git_commit b972148fd57556f86921a85c960b8808a8a09291
 %{?git_commit:%global git_commit_hash %(c=%{git_commit}; echo ${c:0:7})}
 
 %global _python_bytecompile_extra 0
@@ -26,13 +26,13 @@
 %endif
 
 Name:           crypto-policies
-Version:        20221215
-Release:        1.git9a18988%{?dist}.1
+Version:        20230731
+Release:        1.git94f0e2c%{?dist}.1
 Summary:        System-wide crypto policies
 
 License:        LGPLv2+
 URL:            https://gitlab.com/redhat-crypto/fedora-crypto-policies
-# For RHEL-9.2 we use the upstream branch rhel9.2 and are freezing version at 20221215-1.git9a18988.
+# For RHEL-9.3 we use the upstream branch rhel9.3 and are freezing version at 20230731-1.git94f0e2c.
 Source0:        https://gitlab.com/redhat-crypto/fedora-crypto-policies/-/archive/%{git_commit_hash}/%{name}-git%{git_commit_hash}.tar.gz
 
 BuildArch: noarch
@@ -41,7 +41,7 @@ BuildRequires: libxslt
 BuildRequires: openssl
 BuildRequires: nss-tools
 BuildRequires: gnutls-utils >= 3.6.0
-BuildRequires: java-1.8.0-openjdk-devel
+BuildRequires: java-devel
 BuildRequires: bind
 BuildRequires: perl-interpreter
 BuildRequires: perl-generators
@@ -55,7 +55,11 @@ Conflicts: openssl < 1:3.0.1-10
 Conflicts: nss < 3.90.0
 Conflicts: libreswan < 3.28
 Conflicts: openssh < 8.7p1-24
-Conflicts: gnutls < 3.7.6-21.el9_2
+%if 0%{?rhel} == 10
+Conflicts: gnutls < 3.7.2-3
+%else
+Conflicts: gnutls < 3.7.6-22
+%endif
 
 %description
 This package provides pre-built configuration files with
@@ -86,6 +90,18 @@ sed -i \
   "s/MIN_RSA_DEFAULT = .*/MIN_RSA_DEFAULT = '%{MIN_RSA_NAME}'/" \
   python/policygenerators/openssh.py
 grep "MIN_RSA_DEFAULT = '%{MIN_RSA_NAME}'" python/policygenerators/openssh.py
+
+%if 0%{?rhel} == 10
+# currently ELN 3.90-1 doesn't carry the TLS-REQUIRE-EMS patch
+sed -i "s/'NSS_NO_TLS_REQUIRE_EMS', '0'/'NSS_NO_TLS_REQUIRE_EMS', '1'/" \
+  python/policygenerators/nss.py tests/nss.py
+sed -i "s/:TLS-REQUIRE-EMS:/:/" tests/outputs/*FIPS*.txt
+# currently ELN/RHEL gnutls do not carry the tls-session-hash patch
+sed -i "s/'GNUTLS_NO_TLS_SESSION_HASH', '0'/'GNUTLS_NO_TLS_SESSION_HASH', '1'/" \
+  python/policygenerators/gnutls.py
+sed -i "/^tls-session-hash =/d" tests/outputs/*FIPS*.txt
+%endif
+
 %make_build
 
 %install
@@ -129,6 +145,7 @@ done
 %else
   [ "%{MIN_RSA_NAME}" == "RequiredRSASize" ] || exit 7
 %endif
+
 make ON_RHEL9=1 test
 
 %post -p <lua>
@@ -220,13 +237,24 @@ end
 %{_mandir}/man8/fips-finish-install.8*
 
 %changelog
-* Wed Aug 02 2023 Alexander Sosedkin <asosedkin@redhat.com> - 20221215-1.git9a18988.1
+* Wed Sep 20 2023 Alexander Sosedkin <asosedkin@redhat.com> - 20230731-1.git94f0e2c.1
+- OSPP subpolicy: tighten beyond reason for OSPP 4.3
+
+* Mon Jul 31 2023 Alexander Sosedkin <asosedkin@redhat.com> - 20230731-1.git94f0e2c
+- krb5: sort enctypes mac-first, cipher-second, prioritize SHA-2 ones
 - FIPS: enforce EMS in FIPS mode
 - NO-ENFORCE-EMS: add subpolicy to undo the EMS enforcement in FIPS mode
-- nss: implement EMS enforcement in FIPS mode
+- nss: implement EMS enforcement in FIPS mode (disabled in ELN)
 - openssl: implement EMS enforcement in FIPS mode
-- gnutls: implement EMS enforcement in FIPS mode
+- gnutls: implement EMS enforcement in FIPS mode (disabled in ELN)
 - docs: replace `FIPS 140-2` with just `FIPS 140`
+
+* Wed Jun 14 2023 Alexander Sosedkin <asosedkin@redhat.com> - 20230614-1.git027799d
+- policies: restore group order to old OpenSSL default order
+
+* Fri May 05 2023 Alexander Sosedkin <asosedkin@redhat.com> - 20230505-1.gitf69bbc2
+- openssl: set Groups explicitly
+- openssl: add support for Brainpool curves
 
 * Thu Dec 15 2022 Alexander Sosedkin <asosedkin@redhat.com> - 20221215-1.git9a18988
 - bind: expand the list of disableable algorithms
