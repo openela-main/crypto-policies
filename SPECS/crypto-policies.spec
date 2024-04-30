@@ -1,4 +1,5 @@
-%global git_commit b972148fd57556f86921a85c960b8808a8a09291
+%global git_date 20240202
+%global git_commit 283706dbc258f4ac0b19b3291bc18f9b691b222f
 %{?git_commit:%global git_commit_hash %(c=%{git_commit}; echo ${c:0:7})}
 
 %global _python_bytecompile_extra 0
@@ -26,15 +27,18 @@
 %endif
 
 Name:           crypto-policies
-Version:        20230731
-Release:        1.git94f0e2c%{?dist}.1
+Version:        %{git_date}
+Release:        1.git%{git_commit_hash}%{?dist}
 Summary:        System-wide crypto policies
 
-License:        LGPLv2+
+License:        LGPL-2.1-or-later
 URL:            https://gitlab.com/redhat-crypto/fedora-crypto-policies
-# For RHEL-9.3 we use the upstream branch rhel9.3 and are freezing version at 20230731-1.git94f0e2c.
+# For RHEL-9 we use the upstream branch rhel9.
 Source0:        https://gitlab.com/redhat-crypto/fedora-crypto-policies/-/archive/%{git_commit_hash}/%{name}-git%{git_commit_hash}.tar.gz
 
+%if 0%{?rhel} >= 10
+ExclusiveArch: %{java_arches} noarch
+%endif
 BuildArch: noarch
 BuildRequires: asciidoc
 BuildRequires: libxslt
@@ -237,8 +241,32 @@ end
 %{_mandir}/man8/fips-finish-install.8*
 
 %changelog
-* Wed Sep 20 2023 Alexander Sosedkin <asosedkin@redhat.com> - 20230731-1.git94f0e2c.1
+* Fri Feb 02 2024 Alexander Sosedkin <asosedkin@redhat.com> - 20240202-1.git283706d
+- fips-finish-install: make sure ostree is detected in chroot
+- fips-mode-setup: make sure ostree is detected in chroot
+- fips-finish-install: Create/remove /etc/system-fips on ostree systems
+- java: disable ChaCha20-Poly1305 where applicable
+
+* Mon Nov 13 2023 Clemens Lang <cllang@redhat.com> - 20231113-1.gite9247c2
+- fips-mode-setup: Fix test for empty /boot (RHEL-11350)
+- fips-mode-setup: Avoid 'boot=UUID=' if /boot == / (RHEL-11350)
+
+* Thu Nov 09 2023 Clemens Lang <cllang@redhat.com> - 20231109-1.git0ceff7f
+- Restore support for scoped ssh_etm directives (RHEL-15925)
+- Print matches in syntax deprecation warnings (RHEL-15925)
+
+* Wed Nov 08 2023 Clemens Lang <cllang@redhat.com> - 20231108-1.git994ae09
+- turn ssh_etm into an etm@SSH tri-state (RHEL-15925)
+- fips-mode-setup: increase chroot-friendliness (RHEL-11350)
+- fips-mode-setup: Fix usage with --no-bootcfg (RHEL-11350)
+
+* Mon Oct 16 2023 Alexander Sosedkin <asosedkin@redhat.com> - 20231016-1.git77ceb0b
+- openssl: fix SHA1 and NO-ENFORCE-EMS interaction
+- bind: fix a typo that led to duplication of ECDSAPxxxSHAxxx
+
+* Wed Sep 20 2023 Alexander Sosedkin <asosedkin@redhat.com> - 20230920-1.git8dcf74d
 - OSPP subpolicy: tighten beyond reason for OSPP 4.3
+- fips-mode-setup: more thorough --disable, still unsupported
 
 * Mon Jul 31 2023 Alexander Sosedkin <asosedkin@redhat.com> - 20230731-1.git94f0e2c
 - krb5: sort enctypes mac-first, cipher-second, prioritize SHA-2 ones
