@@ -1,34 +1,12 @@
-%global git_date 20240202
-%global git_commit 283706dbc258f4ac0b19b3291bc18f9b691b222f
+%global git_date 20240828
+%global git_commit 626aa590f9c1ffe7ce108952e9449f22a642cca2
 %{?git_commit:%global git_commit_hash %(c=%{git_commit}; echo ${c:0:7})}
 
 %global _python_bytecompile_extra 0
 
-# RSAMinSize vs RequiredRSASize vs nothing, remove when OpenSSH >= 9.1
-%if 0%{?rhel} == 9
-  # RHEL-9: must be RequiredRSASize in RHEL >= 9.2, Conflicts-enforced,
-  %global MIN_RSA_NAME RequiredRSASize
-%elif 0%{?rhel} == 10
-  # ELN: RequiredRSASize for openssh >= 9.0p1-5, RSAMinSize for >= 9.0p1-2
-  %if v"%(rpm -q openssh | head -n1)" >= v"openssh-9.0p1-5"
-    %global MIN_RSA_NAME RequiredRSASize
-  %elif v"%(rpm -q openssh | head -n1)" >= v"openssh-9.0p1-2"
-    %global MIN_RSA_NAME RSAMinSize
-  %else
-    %global MIN_RSA_NAME none
-  %endif
-%else
-  # some other distro, follow autodetection which checks for openssh >= 9.1
-  %if v"%(rpm -q openssh | head -n1)" >= v"openssh-9.1"
-    %global MIN_RSA_NAME RequiredRSASize
-  %else
-    %global MIN_RSA_NAME none
-  %endif
-%endif
-
 Name:           crypto-policies
 Version:        %{git_date}
-Release:        1.git%{git_commit_hash}%{?dist}
+Release:        2.git%{git_commit_hash}%{?dist}
 Summary:        System-wide crypto policies
 
 License:        LGPL-2.1-or-later
@@ -36,34 +14,24 @@ URL:            https://gitlab.com/redhat-crypto/fedora-crypto-policies
 # For RHEL-9 we use the upstream branch rhel9.
 Source0:        https://gitlab.com/redhat-crypto/fedora-crypto-policies/-/archive/%{git_commit_hash}/%{name}-git%{git_commit_hash}.tar.gz
 
-%if 0%{?rhel} >= 10
-ExclusiveArch: %{java_arches} noarch
-%endif
 BuildArch: noarch
 BuildRequires: asciidoc
 BuildRequires: libxslt
 BuildRequires: openssl
 BuildRequires: nss-tools
-BuildRequires: gnutls-utils >= 3.6.0
+BuildRequires: gnutls-utils
+BuildRequires: openssh-clients
 BuildRequires: java-devel
 BuildRequires: bind
-BuildRequires: perl-interpreter
-BuildRequires: perl-generators
-BuildRequires: perl(File::pushd), perl(File::Temp), perl(File::Copy)
-BuildRequires: perl(File::Which)
-BuildRequires: python3-devel >= 3.6
+BuildRequires: python3-devel >= 3.9
 BuildRequires: python3-pytest
 BuildRequires: make
 
-Conflicts: openssl < 1:3.0.1-10
+Conflicts: openssl-libs < 1:3.0.1-10
 Conflicts: nss < 3.90.0
 Conflicts: libreswan < 3.28
 Conflicts: openssh < 8.7p1-24
-%if 0%{?rhel} == 10
-Conflicts: gnutls < 3.7.2-3
-%else
 Conflicts: gnutls < 3.7.6-22
-%endif
 
 %description
 This package provides pre-built configuration files with
@@ -91,20 +59,9 @@ to enable or disable the system FIPS mode.
 
 %build
 sed -i \
-  "s/MIN_RSA_DEFAULT = .*/MIN_RSA_DEFAULT = '%{MIN_RSA_NAME}'/" \
+  "s/MIN_RSA_DEFAULT = .*/MIN_RSA_DEFAULT = 'RequiredRSASize'/" \
   python/policygenerators/openssh.py
-grep "MIN_RSA_DEFAULT = '%{MIN_RSA_NAME}'" python/policygenerators/openssh.py
-
-%if 0%{?rhel} == 10
-# currently ELN 3.90-1 doesn't carry the TLS-REQUIRE-EMS patch
-sed -i "s/'NSS_NO_TLS_REQUIRE_EMS', '0'/'NSS_NO_TLS_REQUIRE_EMS', '1'/" \
-  python/policygenerators/nss.py tests/nss.py
-sed -i "s/:TLS-REQUIRE-EMS:/:/" tests/outputs/*FIPS*.txt
-# currently ELN/RHEL gnutls do not carry the tls-session-hash patch
-sed -i "s/'GNUTLS_NO_TLS_SESSION_HASH', '0'/'GNUTLS_NO_TLS_SESSION_HASH', '1'/" \
-  python/policygenerators/gnutls.py
-sed -i "/^tls-session-hash =/d" tests/outputs/*FIPS*.txt
-%endif
+grep "MIN_RSA_DEFAULT = 'RequiredRSASize'" python/policygenerators/openssh.py
 
 %make_build
 
@@ -141,16 +98,7 @@ done
 %py_byte_compile %{__python3} %{buildroot}%{_datadir}/crypto-policies/python
 
 %check
-# RSAMinSize vs RequiredRSASize vs nothing, remove when OpenSSH >= 9.1
-%if "%{MIN_RSA_NAME}" == "none"
-  sed -i '/RequiredRSASize .*/d' tests/outputs/*.txt
-%elif "%{MIN_RSA_NAME}" == "RSAMinSize"
-  sed -i 's/RequiredRSASize/RSAMinSize/' tests/outputs/*.txt
-%else
-  [ "%{MIN_RSA_NAME}" == "RequiredRSASize" ] || exit 7
-%endif
-
-make ON_RHEL9=1 test
+make test SKIP_LINTING=1
 
 %post -p <lua>
 if not posix.access("%{_sysconfdir}/crypto-policies/config") then
@@ -228,6 +176,8 @@ end
 %{_datarootdir}/crypto-policies/reload-cmds.sh
 %{_datarootdir}/crypto-policies/policies
 
+%{_libexecdir}/fips-setup-helper
+
 %license COPYING.LESSER
 
 %files scripts
@@ -241,6 +191,34 @@ end
 %{_mandir}/man8/fips-finish-install.8*
 
 %changelog
+* Tue Sep 17 2024 Alexander Sosedkin <asosedkin@redhat.com> - 20240828-2.git626aa59
+- release bump
+
+* Wed Aug 28 2024 Alexander Sosedkin <asosedkin@redhat.com> - 20240828-1.git626aa59
+- fips-mode-setup: small Argon2 detection fix
+
+* Thu Aug 22 2024 Alexander Sosedkin <asosedkin@redhat.com> - 20240822-1.gitbaf3e06
+- fips-mode-setup: block if LUKS devices using Argon2 are detected
+
+* Thu Aug 15 2024 Alexander Sosedkin <asosedkin@redhat.com> - 20240815-1.gite217f03
+- java: start controlling / disable DTLSv1.0
+- java: disable anon ciphersuites, tying them to NULL
+- java: respect more key size restrictions
+- java: specify jdk.tls.namedGroups system property
+- java: make hash, mac and sign more orthogonal
+- fips-mode-setup: add another scary "unsupported"
+- fips-mode-setup: flashy ticking warning upon use
+- java: use and include jdk.disabled.namedCurves
+- ec_min_size: introduce and use in java, default to 256
+- java: stop specifying jdk.tls.namedGroups in javasystem
+- fips-setup-helper: add a libexec helper for anaconda
+- fips-mode-setup: force --no-bootcfg when UKI is detected
+
+* Mon Mar 04 2024 Alexander Sosedkin <asosedkin@redhat.com> - 20240304-1.gitb1c706d
+- packaging: remove perl build-dependency, it's not needed anymore
+- packaging: use newly introduced SKIP_LINTING=1
+- packaging: drop stale workarounds
+
 * Fri Feb 02 2024 Alexander Sosedkin <asosedkin@redhat.com> - 20240202-1.git283706d
 - fips-finish-install: make sure ostree is detected in chroot
 - fips-mode-setup: make sure ostree is detected in chroot
