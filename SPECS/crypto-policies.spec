@@ -1,12 +1,12 @@
-%global git_date 20240828
-%global git_commit 626aa590f9c1ffe7ce108952e9449f22a642cca2
+%global git_date 20250128
+%global git_commit 5269e22306379d643e69160ba5144855305762ac
 %{?git_commit:%global git_commit_hash %(c=%{git_commit}; echo ${c:0:7})}
 
 %global _python_bytecompile_extra 0
 
 Name:           crypto-policies
 Version:        %{git_date}
-Release:        2.git%{git_commit_hash}%{?dist}
+Release:        1.git%{git_commit_hash}%{?dist}
 Summary:        System-wide crypto policies
 
 License:        LGPL-2.1-or-later
@@ -191,6 +191,10 @@ end
 %{_mandir}/man8/fips-finish-install.8*
 
 %changelog
+* Tue Jan 28 2025 Alexander Sosedkin <asosedkin@redhat.com> - 20250128-1.git5269e22
+- openssl: stricter enabling of Ciphersuites
+- openssl: make use of -CBC and -AESGCM keywords
+
 * Tue Sep 17 2024 Alexander Sosedkin <asosedkin@redhat.com> - 20240828-2.git626aa59
 - release bump
 
