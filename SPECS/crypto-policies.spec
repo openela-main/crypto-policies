@@ -1,17 +1,17 @@
-%global git_commit 4304d53132e06ecb4ffbfdb5cb13dfdbc66adb7b
+%global git_date 20250905
+%global git_commit c7eb7b2870c42c8d988f88b2398427ac9fcfe413
 %{?git_commit:%global git_commit_hash %(c=%{git_commit}; echo ${c:0:7})}
 
 %global _python_bytecompile_extra 0
 
 Name:           crypto-policies
-Version:        20250214
-Release:        1.gitfd9b9b9%{?dist}.1
+Version:        %{git_date}
+Release:        2.git%{git_commit_hash}%{?dist}
 Summary:        System-wide crypto policies
 
 License:        LGPL-2.1-or-later
 URL:            https://gitlab.com/redhat-crypto/fedora-crypto-policies
-# For RHEL-10.0 we use the upstream branch rhel10.0
-# and freeze the version at 20250214-1.gitfd9b9b9
+# For RHEL-10 we use the upstream branch rhel10.
 Source0:        https://gitlab.com/redhat-crypto/fedora-crypto-policies/-/archive/%{git_commit_hash}/%{name}-git%{git_commit_hash}.tar.gz
 
 ExclusiveArch: %{java_arches} noarch
@@ -29,11 +29,15 @@ BuildRequires: python3-pytest
 BuildRequires: make
 BuildRequires: systemd-rpm-macros
 
-Conflicts: openssl-libs < 1:3.2
+Conflicts: openssl-libs < 1:3.5
 Conflicts: nss < 3.101.0-9
 Conflicts: libreswan < 4.12
 Conflicts: openssh < 9.9p1
-Conflicts: gnutls < 3.8.8
+Conflicts: gnutls < 3.8.9
+
+# TODO: remove sometime later (once there's no viable upgrade path from 10.0)
+Provides: crypto-policies-pq-preview = %{version}-%{release}
+Obsoletes: crypto-policies-pq-preview < %{version}-%{release}
 
 %description
 This package provides pre-built configuration files with
@@ -52,24 +56,6 @@ the policies provided by the crypto-policies package. These can be
 either the pre-built policies from the base package or custom policies
 defined in simple policy definition files.
 
-The package also provides a tool fips-mode-setup, which can be used
-to enable or disable the system FIPS mode.
-
-%package pq-preview
-Summary: Post-quantum crypto-policies [Technology Preview]
-Requires: %{name} = %{version}-%{release}
-Requires: liboqs
-Requires: oqsprovider
-
-%description pq-preview
-This package TEST-PQ subpolicy policy with postquantum algorithms enabled.
-It also depends on liboqs and oqs-provider to ensure they're installed.
-
-This package is part of a Technology Preview.
-Technology Preview features are not fully supported,
-may not be functionally complete,
-and are not suitable for deployment in production.
-
 %prep
 %setup -q -n fedora-crypto-policies-%{git_commit_hash}-%{git_commit}
 %autopatch -p1
@@ -83,9 +69,13 @@ sed -i "s/:TLS-REQUIRE-EMS:/:/" tests/outputs/*FIPS*.txt
 %endif
 
 %if 0%{?rhel} == 11
-# currently ELN NSS doesn't support mlkem768secp256r1
+# currently ELN NSS doesn't support mlkem768secp256r1, mlkem1024secp384r1, mldsa
 sed -i '/P256-MLKEM768/d' python/policygenerators/nss.py
-sed -i "s/:mlkem768secp256r1:/:/" tests/outputs/*:TEST-PQ-nss.txt
+sed -i '/P384-MLKEM1024/d' python/policygenerators/nss.py
+sed -i "/ML-DSA/d" python/policygenerators/nss.py
+sed -i "s/:secp256r1mlkem768:/:/" tests/outputs/*-nss.txt
+sed -i "s/:secp384r1mlkem1024:/:/" tests/outputs/*-nss.txt
+sed -i "s/:ML-DSA-[0-9][0-9]//g" tests/outputs/*-nss.txt
 %endif
 
 %make_build
@@ -176,6 +166,8 @@ if [ $1 == 2 ]; then  # upgrade
 fi
 # Drop removed javasystem backend; can be dropped in 11
 rm -f "%{_sysconfdir}/crypto-policies/back-ends/javasystem.config" 2>/dev/null || :
+# Drop removed openssl backend; can be dropped in 11
+rm -f "%{_sysconfdir}/crypto-policies/back-ends/openssl.config" 2>/dev/null || :
 exit 0
 
 %posttrans scripts
@@ -195,7 +187,6 @@ exit 0
 %ghost %config(missingok,noreplace) %{_sysconfdir}/crypto-policies/config
 
 %ghost %config(missingok,noreplace) %verify(not mode) %{_sysconfdir}/crypto-policies/back-ends/gnutls.config
-%ghost %config(missingok,noreplace) %verify(not mode) %{_sysconfdir}/crypto-policies/back-ends/openssl.config
 %ghost %config(missingok,noreplace) %verify(not mode) %{_sysconfdir}/crypto-policies/back-ends/opensslcnf.config
 %ghost %config(missingok,noreplace) %verify(not mode) %{_sysconfdir}/crypto-policies/back-ends/openssh.config
 %ghost %config(missingok,noreplace) %verify(not mode) %{_sysconfdir}/crypto-policies/back-ends/opensshserver.config
@@ -234,8 +225,9 @@ exit 0
 %{_datarootdir}/crypto-policies/policies/modules/AD-SUPPORT-LEGACY.pmod
 %{_datarootdir}/crypto-policies/policies/modules/ECDHE-ONLY.pmod
 %{_datarootdir}/crypto-policies/policies/modules/NO-ENFORCE-EMS.pmod
+%{_datarootdir}/crypto-policies/policies/modules/NO-PQ.pmod
 %{_datarootdir}/crypto-policies/policies/modules/OSPP.pmod
-# but not TEST-PQ
+%{_datarootdir}/crypto-policies/policies/modules/TEST-PQ.pmod
 
 %{_libexecdir}/fips-setup-helper
 %{_libexecdir}/fips-crypto-policy-overlay
@@ -248,13 +240,59 @@ exit 0
 %{_mandir}/man8/update-crypto-policies.8*
 %{_datarootdir}/crypto-policies/python
 
-%files pq-preview
-%{_datarootdir}/crypto-policies/policies/modules/TEST-PQ.pmod
-
-
 %changelog
-* Tue Jul 15 2025 Alexander Sosedkin <asosedkin@redhat.com> - 20250214-1.gitfd9b9b9.1
+* Thu Sep 25 2025 Clemens Lang <cllang@redhat.com> - 20250905-2.gitc7eb7b2
+- add Obsoletes: crypto-policies-pq-preview to ease transition
+  Resolves: RHEL-113008
+
+* Fri Sep 05 2025 Alexander Sosedkin <asosedkin@redhat.com> - 20250905-1.gitc7eb7b2
+- rpm-sequoia: enable MLDSA65-ED25519 and MLDSA87-ED448 in all policies
+- rpm-sequoia: force enable all PQ algorithms for now
+
+* Mon Aug 04 2025 Alexander Sosedkin <asosedkin@redhat.com> - 20250804-1.git2ca4115
+- nss: enable mlkem1024secp384r1, rename mlkem768secp256r1
+- nss: enable ML-DSA
+
+* Mon Jul 14 2025 Alexander Sosedkin <asosedkin@redhat.com> - 20250714-1.git95bf40e
+-  sequoia: add sha3, x25519, ed25519, x448, ed448, but not for rpm-sequoia
+-  sequoia, rpm-sequoia: use ignore_invalid with sha3, x25519, ...
+-  sequoia: Add PQC algorithm
+-  sequoia: Do not include EdDSA in FIPS policy
+-  sequoia: Generate AEAD policy
+-  openssl: send one PQ and one classic key_share; prioritize PQ groups
+-  FIPS: deprioritize X25519-MLKEM768 over P256-MLKEM768 for openssl...
+-  python, policies, tests: alias X25519-MLKEM768 to MLKEM768-X25519
+-  gnutls: enable ML-DSA, for both secure-sig and secure-sig-for-cert
+
+* Mon Jun 02 2025 Alexander Sosedkin <asosedkin@redhat.com> - 20250602-1.gita6d4d0c
+- openssl: fix mistakes in integrity-only cipher definitions
+- FIPS: enable hybrid ML-KEM (TLS only) and pure ML-DSA
 - AD-SUPPORT-LEGACY: resurrect subpolicy as present in RHEL-9
+
+* Sat Apr 26 2025 Alexander Sosedkin <asosedkin@redhat.com> - 20250424-2.git9267dee
+- add Provides: crypto-policies-pq-preview to ease transition
+- require openssl 3.5 outright
+
+* Thu Apr 24 2025 Alexander Sosedkin <asosedkin@redhat.com> - 20250424-1.git9267dee
+- LEGACY/DEFAULT/FUTURE: enable hybrid ML-KEM and pure ML-DSA
+- drop crypto-policies-pq-preview subpackage, TEST-PQ goes into main one
+- NO-PQ: introduce
+- openssl: fix enabling integrity-only ciphersuites (still need min_rsa_size=0)
+
+* Tue Apr 22 2025 Alexander Sosedkin <asosedkin@redhat.com> - 20250404-4.gitca0e9a5
+- Fix accidental turning of oqsprovider BuildRequires into Requires
+- Drop requires on liboqs
+
+* Wed Apr 16 2025 Alexander Sosedkin <asosedkin@redhat.com> - 20250404-3.gitca0e9a5
+- Relax dependency on oqsprovider, also allowing openssl 3.5 instead
+
+* Mon Apr 07 2025 Alexander Sosedkin <asosedkin@redhat.com> - 20250404-2.gitca0e9a5
+- Add a build dependency on oqsprovider as openssh config check is now fussy
+
+* Fri Apr 04 2025 Alexander Sosedkin <asosedkin@redhat.com> - 20250404-1.gitca0e9a5
+- openssl: stop generating `openssl` in favour of `opensslcnf`
+- gnutls: support P384-MLKEM1024
+- openssl: specify default key size for req (openssl does not consume it yet)
 
 * Fri Feb 14 2025 Alexander Sosedkin <asosedkin@redhat.com> - 20250214-1.gitfd9b9b9
 - openssl: use both names for P384-MLKEM1024
