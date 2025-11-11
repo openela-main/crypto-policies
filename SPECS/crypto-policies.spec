@@ -1,5 +1,5 @@
-%global git_date 20250128
-%global git_commit 5269e22306379d643e69160ba5144855305762ac
+%global git_date 20250905
+%global git_commit 377cc42263fc36a873e0dedd9eb098df931edd3d
 %{?git_commit:%global git_commit_hash %(c=%{git_commit}; echo ${c:0:7})}
 
 %global _python_bytecompile_extra 0
@@ -160,6 +160,7 @@ end
 %ghost %config(missingok,noreplace) %verify(not mode) %{_sysconfdir}/crypto-policies/back-ends/libreswan.config
 %ghost %config(missingok,noreplace) %verify(not mode) %{_sysconfdir}/crypto-policies/back-ends/libssh.config
 %ghost %config(missingok,noreplace) %verify(not mode) %{_sysconfdir}/crypto-policies/back-ends/openssl_fips.config
+%ghost %config(missingok,noreplace) %verify(not mode) %{_sysconfdir}/crypto-policies/back-ends/rpm-sequoia.config
 # %verify(not mode) comes from the fact
 # these turn into symlinks and back to regular files at will, see bz1898986
 
@@ -191,6 +192,24 @@ end
 %{_mandir}/man8/fips-finish-install.8*
 
 %changelog
+* Fri Sep 05 2025 Alexander Sosedkin <asosedkin@redhat.com> - 20250905-1.git377cc42
+- rpm-sequoia: enable MLDSA65-ED25519 and MLDSA87-ED448 in all policies
+- rpm-sequoia: enable SHA-1 in all policies
+- rpm-sequoia: force enable all PQ algorithms for now
+
+* Mon Aug 04 2025 Alexander Sosedkin <asosedkin@redhat.com> - 20250804-1.git2c74f3d
+- nss: enable ML-KEM and ML-DSA
+
+* Mon Jul 21 2025 Alexander Sosedkin <asosedkin@redhat.com> - 20250721-1.git162e4cb
+- rpm-sequoia: add back-end
+- openssl: send one PQ and one classic key_share; prioritize PQ groups
+- policies: alias X25519-MLKEM768 to MLKEM768-X25519
+- nss: enable ED25519
+
+* Mon Jun 02 2025 Alexander Sosedkin <asosedkin@redhat.com> - 20250602-1.gita839241
+- openssl: fix mistakes in integrity-only cipher definitions
+- PQ: add a subpolicy with some post-quantum algorithms
+
 * Tue Jan 28 2025 Alexander Sosedkin <asosedkin@redhat.com> - 20250128-1.git5269e22
 - openssl: stricter enabling of Ciphersuites
 - openssl: make use of -CBC and -AESGCM keywords
