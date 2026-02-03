@@ -6,7 +6,7 @@
 
 Name:           crypto-policies
 Version:        %{git_date}
-Release:        2.git%{git_commit_hash}%{?dist}
+Release:        2.git%{git_commit_hash}%{?dist}.1
 Summary:        System-wide crypto policies
 
 License:        LGPL-2.1-or-later
@@ -55,6 +55,20 @@ This package provides a tool update-crypto-policies, which applies
 the policies provided by the crypto-policies package. These can be
 either the pre-built policies from the base package or custom policies
 defined in simple policy definition files.
+
+%package pq-preview
+Summary: A stub package formerly containing post-quantum crypto-policies
+Requires: %{name}
+
+%description pq-preview
+This is a stub package that used to contain
+a TEST-PQ subpolicy policy with postquantum algorithms enabled.
+Post-quantum algorithms are now on by default,
+the subpolicy has since moved into the main crypto-policies package,
+so the package no longer serves any purpose.
+
+%files pq-preview
+# intentionally left blank
 
 %prep
 %setup -q -n fedora-crypto-policies-%{git_commit_hash}-%{git_commit}
@@ -241,6 +255,10 @@ exit 0
 %{_datarootdir}/crypto-policies/python
 
 %changelog
+* Wed Dec 03 2025 Alexander Sosedkin <asosedkin@redhat.com> - 20250905-2.gitc7eb7b2.1
+- turn crypto-policies-pq-preview back into a real noarch package
+  Resolves: RHEL-130596
+
 * Thu Sep 25 2025 Clemens Lang <cllang@redhat.com> - 20250905-2.gitc7eb7b2
 - add Obsoletes: crypto-policies-pq-preview to ease transition
   Resolves: RHEL-113008
