@@ -1,12 +1,12 @@
-%global git_date 20250905
-%global git_commit c7eb7b2870c42c8d988f88b2398427ac9fcfe413
+%global git_date 20260216
+%global git_commit 0e54016de30f669e13d6fcf16a25e655301c34b4
 %{?git_commit:%global git_commit_hash %(c=%{git_commit}; echo ${c:0:7})}
 
 %global _python_bytecompile_extra 0
 
 Name:           crypto-policies
 Version:        %{git_date}
-Release:        2.git%{git_commit_hash}%{?dist}.1
+Release:        1.git%{git_commit_hash}%{?dist}
 Summary:        System-wide crypto policies
 
 License:        LGPL-2.1-or-later
@@ -30,10 +30,11 @@ BuildRequires: make
 BuildRequires: systemd-rpm-macros
 
 Conflicts: openssl-libs < 1:3.5
-Conflicts: nss < 3.101.0-9
+Conflicts: nss < 3.112
 Conflicts: libreswan < 4.12
-Conflicts: openssh < 9.9p1
-Conflicts: gnutls < 3.8.9
+Conflicts: openssh < 9.9p1-19
+Conflicts: gnutls < 3.8.10
+Conflicts: libssh < 0.12
 
 # TODO: remove sometime later (once there's no viable upgrade path from 10.0)
 Provides: crypto-policies-pq-preview = %{version}-%{release}
@@ -55,20 +56,6 @@ This package provides a tool update-crypto-policies, which applies
 the policies provided by the crypto-policies package. These can be
 either the pre-built policies from the base package or custom policies
 defined in simple policy definition files.
-
-%package pq-preview
-Summary: A stub package formerly containing post-quantum crypto-policies
-Requires: %{name}
-
-%description pq-preview
-This is a stub package that used to contain
-a TEST-PQ subpolicy policy with postquantum algorithms enabled.
-Post-quantum algorithms are now on by default,
-the subpolicy has since moved into the main crypto-policies package,
-so the package no longer serves any purpose.
-
-%files pq-preview
-# intentionally left blank
 
 %prep
 %setup -q -n fedora-crypto-policies-%{git_commit_hash}-%{git_commit}
@@ -255,9 +242,19 @@ exit 0
 %{_datarootdir}/crypto-policies/python
 
 %changelog
-* Wed Dec 03 2025 Alexander Sosedkin <asosedkin@redhat.com> - 20250905-2.gitc7eb7b2.1
-- turn crypto-policies-pq-preview back into a real noarch package
-  Resolves: RHEL-130596
+* Mon Feb 16 2026 Alexander Sosedkin <asosedkin@redhat.com> - 20260216-1.git0e54016
+- FIPS: allow NIST hybrid kexes for openssh
+- libssh: enable NIST ML-KEM hybrids
+- libssh: add mlkem768x25519-sha256
+
+* Thu Nov 27 2025 Alexander Sosedkin <asosedkin@redhat.com> - 20251127-1.git27c2902
+- FUTURE: disable kex other than KEM-ECDH
+
+* Wed Nov 26 2025 Alexander Sosedkin <asosedkin@redhat.com> - 20251126-1.git918f03d
+- openssl: let TLS 1.3 brainpool groups get used for key shares
+- openssh: support mlkem768nistp256-sha256 and mlkem1024nistp384-sha384
+- FUTURE: disable non-PQ groups, keep ML-KEM only
+- sequoia: register "eddsa" as an alias to EDDSA-ED25519
 
 * Thu Sep 25 2025 Clemens Lang <cllang@redhat.com> - 20250905-2.gitc7eb7b2
 - add Obsoletes: crypto-policies-pq-preview to ease transition
