@@ -1,5 +1,5 @@
-%global git_date 20250905
-%global git_commit 377cc42263fc36a873e0dedd9eb098df931edd3d
+%global git_date 20260224
+%global git_commit ea0f072d4d1a138885a75230792417ceb6f44e6b
 %{?git_commit:%global git_commit_hash %(c=%{git_commit}; echo ${c:0:7})}
 
 %global _python_bytecompile_extra 0
@@ -30,8 +30,8 @@ BuildRequires: make
 Conflicts: openssl-libs < 1:3.0.1-10
 Conflicts: nss < 3.90.0
 Conflicts: libreswan < 3.28
-Conflicts: openssh < 8.7p1-24
-Conflicts: gnutls < 3.7.6-22
+Conflicts: openssh < 9.9p1-4.el9
+Conflicts: gnutls < 3.8.10
 
 %description
 This package provides pre-built configuration files with
@@ -192,6 +192,13 @@ end
 %{_mandir}/man8/fips-finish-install.8*
 
 %changelog
+* Tue Feb 24 2026 Alexander Sosedkin <asosedkin@redhat.com> - 20260224-1.gitea0f072
+- openssh: enable mlkem768x25519-sha256
+
+* Wed Nov 26 2025 Alexander Sosedkin <asosedkin@redhat.com> - 20251126-1.gite9c4db2
+- gnutls: enable ML-KEM and ML-DSA
+- sequoia: register "eddsa" as an alias to EDDSA-ED25519
+
 * Fri Sep 05 2025 Alexander Sosedkin <asosedkin@redhat.com> - 20250905-1.git377cc42
 - rpm-sequoia: enable MLDSA65-ED25519 and MLDSA87-ED448 in all policies
 - rpm-sequoia: enable SHA-1 in all policies
