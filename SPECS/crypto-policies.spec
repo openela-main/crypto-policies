@@ -1,17 +1,16 @@
-%global git_date 20260216
-%global git_commit 0e54016de30f669e13d6fcf16a25e655301c34b4
+%global git_commit e6b01f40621c0859f818ad43b0f3e3aa0263f2a5
 %{?git_commit:%global git_commit_hash %(c=%{git_commit}; echo ${c:0:7})}
 
 %global _python_bytecompile_extra 0
 
 Name:           crypto-policies
-Version:        %{git_date}
-Release:        1.git%{git_commit_hash}%{?dist}
+Version:        20260216
+Release:        1.git0e54016%{?dist}.2
 Summary:        System-wide crypto policies
 
 License:        LGPL-2.1-or-later
 URL:            https://gitlab.com/redhat-crypto/fedora-crypto-policies
-# For RHEL-10 we use the upstream branch rhel10.
+# For RHEL-10.2 we use the upstream branch rhel10.2.
 Source0:        https://gitlab.com/redhat-crypto/fedora-crypto-policies/-/archive/%{git_commit_hash}/%{name}-git%{git_commit_hash}.tar.gz
 
 ExclusiveArch: %{java_arches} noarch
@@ -242,6 +241,12 @@ exit 0
 %{_datarootdir}/crypto-policies/python
 
 %changelog
+* Tue Aug 11 2026 Alexander Sosedkin <asosedkin@redhat.com> - 20260216-1.git0e54016.2
+- FIPS:OSPP: reenable non-TLS CBC
+
+* Fri Jul 31 2026 Alexander Sosedkin <asosedkin@redhat.com> - 20260216-1.git0e54016.1
+- FIPS:OSPP: disable CBC and enable TLS 1.3
+
 * Mon Feb 16 2026 Alexander Sosedkin <asosedkin@redhat.com> - 20260216-1.git0e54016
 - FIPS: allow NIST hybrid kexes for openssh
 - libssh: enable NIST ML-KEM hybrids
