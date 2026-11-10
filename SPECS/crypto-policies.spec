@@ -1,16 +1,17 @@
-%global git_commit e6b01f40621c0859f818ad43b0f3e3aa0263f2a5
+%global git_date 20260811
+%global git_commit 4dcd294c74c015356c61f477ca79f88f32b3234b
 %{?git_commit:%global git_commit_hash %(c=%{git_commit}; echo ${c:0:7})}
 
 %global _python_bytecompile_extra 0
 
 Name:           crypto-policies
-Version:        20260216
-Release:        1.git0e54016%{?dist}.2
+Version:        %{git_date}
+Release:        1.git%{git_commit_hash}%{?dist}
 Summary:        System-wide crypto policies
 
 License:        LGPL-2.1-or-later
 URL:            https://gitlab.com/redhat-crypto/fedora-crypto-policies
-# For RHEL-10.2 we use the upstream branch rhel10.2.
+# For RHEL-10 we use the upstream branch rhel10.
 Source0:        https://gitlab.com/redhat-crypto/fedora-crypto-policies/-/archive/%{git_commit_hash}/%{name}-git%{git_commit_hash}.tar.gz
 
 ExclusiveArch: %{java_arches} noarch
@@ -47,7 +48,6 @@ such as SSL/TLS libraries.
 %package scripts
 Summary: Tool to switch between crypto policies
 Requires: %{name} = %{version}-%{release}
-Recommends: (grubby if kernel)
 Provides: fips-mode-setup = %{version}-%{release}
 
 %description scripts
@@ -61,23 +61,6 @@ defined in simple policy definition files.
 %autopatch -p1
 
 %build
-%if 0%{?rhel} == 11
-# currently ELN NSS doesn't carry the TLS-REQUIRE-EMS patch
-sed -i "s/'NSS_NO_TLS_REQUIRE_EMS', '0'/'NSS_NO_TLS_REQUIRE_EMS', '1'/" \
-  python/policygenerators/nss.py tests/nss.py
-sed -i "s/:TLS-REQUIRE-EMS:/:/" tests/outputs/*FIPS*.txt
-%endif
-
-%if 0%{?rhel} == 11
-# currently ELN NSS doesn't support mlkem768secp256r1, mlkem1024secp384r1, mldsa
-sed -i '/P256-MLKEM768/d' python/policygenerators/nss.py
-sed -i '/P384-MLKEM1024/d' python/policygenerators/nss.py
-sed -i "/ML-DSA/d" python/policygenerators/nss.py
-sed -i "s/:secp256r1mlkem768:/:/" tests/outputs/*-nss.txt
-sed -i "s/:secp384r1mlkem1024:/:/" tests/outputs/*-nss.txt
-sed -i "s/:ML-DSA-[0-9][0-9]//g" tests/outputs/*-nss.txt
-%endif
-
 %make_build
 
 %install
@@ -225,6 +208,7 @@ exit 0
 %{_datarootdir}/crypto-policies/policies/modules/AD-SUPPORT-LEGACY.pmod
 %{_datarootdir}/crypto-policies/policies/modules/ECDHE-ONLY.pmod
 %{_datarootdir}/crypto-policies/policies/modules/NO-ENFORCE-EMS.pmod
+%{_datarootdir}/crypto-policies/policies/modules/NO-HMAC-SHA1.pmod
 %{_datarootdir}/crypto-policies/policies/modules/NO-PQ.pmod
 %{_datarootdir}/crypto-policies/policies/modules/OSPP.pmod
 %{_datarootdir}/crypto-policies/policies/modules/TEST-PQ.pmod
@@ -241,11 +225,23 @@ exit 0
 %{_datarootdir}/crypto-policies/python
 
 %changelog
-* Tue Aug 11 2026 Alexander Sosedkin <asosedkin@redhat.com> - 20260216-1.git0e54016.2
+* Tue Aug 11 2026 Alexander Sosedkin <asosedkin@redhat.com> - 20260811-1.git4dcd294
 - FIPS:OSPP: reenable non-TLS CBC
 
-* Fri Jul 31 2026 Alexander Sosedkin <asosedkin@redhat.com> - 20260216-1.git0e54016.1
+* Fri Jul 31 2026 Alexander Sosedkin <asosedkin@redhat.com> - 20260731-1.git1a5a21e
 - FIPS:OSPP: disable CBC and enable TLS 1.3
+- sequoia: add support for SLH-DSA
+
+* Wed Jul 08 2026 Alexander Sosedkin <asosedkin@redhat.com> - 20260708-1.git988eb15
+- NO-SHA1: drop this subpolicy since it's not doing much
+- NO-HMAC-SHA1: introduce a new subpolicy
+- java: fix MD5withECDSA concatenating with RIPEMD160withRSA
+
+* Mon May 25 2026 Alexander Sosedkin <asosedkin@redhat.com> - 20260525-1.gitf5f5370
+- rpm-sequoia: revert force-enabling PQ algorithms
+- NO-SHA1: revive this subpolicy
+- openssl: prefix every group and sigalg with a ?
+- packaging: drop obsolete grubby dependency
 
 * Mon Feb 16 2026 Alexander Sosedkin <asosedkin@redhat.com> - 20260216-1.git0e54016
 - FIPS: allow NIST hybrid kexes for openssh
