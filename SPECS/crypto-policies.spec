@@ -1,5 +1,5 @@
-%global git_date 20260224
-%global git_commit ea0f072d4d1a138885a75230792417ceb6f44e6b
+%global git_date 20260714
+%global git_commit 65b74f7c0a5f51fc34ac388c820108a707e3574c
 %{?git_commit:%global git_commit_hash %(c=%{git_commit}; echo ${c:0:7})}
 
 %global _python_bytecompile_extra 0
@@ -192,6 +192,14 @@ end
 %{_mandir}/man8/fips-finish-install.8*
 
 %changelog
+* Tue Jul 14 2026 Alexander Sosedkin <asosedkin@redhat.com> - 20260714-1.git65b74f7
+- rpm-sequoia: restore force-enabling PQ algorithms
+- java: fix MD5withECDSA concatenating with RIPEMD160withRSA
+
+* Wed Jun 10 2026 Alexander Sosedkin <asosedkin@redhat.com> - 20260610-1.git0798a9f
+- rpm-sequoia: revert force-enabling PQ algorithms
+- openssl: add TLS 1.3 Brainpool identifiers
+
 * Tue Feb 24 2026 Alexander Sosedkin <asosedkin@redhat.com> - 20260224-1.gitea0f072
 - openssh: enable mlkem768x25519-sha256
 
